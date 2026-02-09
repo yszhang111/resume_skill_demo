@@ -10,6 +10,13 @@ type AnalyzeApiResponse = AnalysisResult & {
   createdAt: string;
 };
 
+type ErrorResponse = {
+  error?: string;
+  detail?: string;
+};
+
+const REQUEST_TIMEOUT_MS = 20000;
+
 export default function HomePage() {
   const [jdText, setJdText] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -20,38 +27,67 @@ export default function HomePage() {
   const runAnalysis = async () => {
     setLoading(true);
     setError(null);
+    let timeout: ReturnType<typeof setTimeout> | null = null;
 
     try {
+      const controller = new AbortController();
+      timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ jdText })
+        body: JSON.stringify({ jdText }),
+        signal: controller.signal
       });
 
-      const data = (await res.json()) as Partial<AnalyzeApiResponse> & { error?: string };
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
 
-      if (!res.ok || !data.analysisId || typeof data.score !== "number") {
-        throw new Error(data.error ?? "Analyze request failed.");
+      const rawBody = await res.text();
+      let parsed: (Partial<AnalyzeApiResponse> & ErrorResponse) | null = null;
+      try {
+        parsed = JSON.parse(rawBody) as Partial<AnalyzeApiResponse> & ErrorResponse;
+      } catch {
+        parsed = null;
+      }
+
+      if (!parsed) {
+        throw new Error(`Analyze API returned non-JSON response (HTTP ${res.status}).`);
+      }
+
+      if (!res.ok || !parsed.analysisId || typeof parsed.score !== "number") {
+        const message = parsed.detail ? `${parsed.error ?? "Analyze request failed."} ${parsed.detail}` : parsed.error;
+        throw new Error(message ?? "Analyze request failed.");
       }
 
       setResult({
-        score: data.score,
-        summary: data.summary ?? "",
-        executedSkills: data.executedSkills ?? [],
-        categoryScores: data.categoryScores ?? [],
-        matchedSkills: data.matchedSkills ?? [],
-        missingSkills: data.missingSkills ?? [],
-        bullets: data.bullets ?? []
+        score: parsed.score,
+        summary: parsed.summary ?? "",
+        executedSkills: parsed.executedSkills ?? [],
+        categoryScores: parsed.categoryScores ?? [],
+        matchedSkills: parsed.matchedSkills ?? [],
+        missingSkills: parsed.missingSkills ?? [],
+        bullets: parsed.bullets ?? []
       });
-      setAnalysisId(data.analysisId);
+      setAnalysisId(parsed.analysisId);
     } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : "Unknown error";
+      const message =
+        requestError instanceof DOMException && requestError.name === "AbortError"
+          ? `Analyze request timed out after ${REQUEST_TIMEOUT_MS / 1000}s.`
+          : requestError instanceof Error
+            ? requestError.message
+            : "Unknown error";
       setError(message);
       setResult(null);
       setAnalysisId(null);
     } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
       setLoading(false);
     }
   };
