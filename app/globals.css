@@ -97,6 +97,31 @@ textarea {
   background: #fbfdff;
 }
 
+input[type="url"],
+input[type="text"] {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.72rem 0.8rem;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  background: #fbfdff;
+}
+
+.inline-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.inline-btn {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
 .primary-btn,
 .secondary-btn {
   border: 0;
@@ -269,5 +294,9 @@ textarea {
 
   .hero h1 {
     font-size: 1.55rem;
+  }
+
+  .inline-row {
+    grid-template-columns: 1fr;
   }
 }

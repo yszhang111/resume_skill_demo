@@ -5,10 +5,11 @@ A TypeScript strict, Next.js App Router demo that treats skills as executable ca
 ## Features
 
 - Skill orchestration pipeline:
-  - JD Parsing Skill (LLM-driven)
-  - Skill Matching Skill (LLM-driven)
-  - Gap Analysis Skill (LLM-driven)
-  - Bullet Generation Skill (LLM-driven)
+  - JD Fetch Skill (URL extraction)
+  - JD Parsing Skill (bundle-driven)
+  - Skill Matching Skill (bundle-driven)
+  - Gap Analysis Skill (bundle-driven)
+  - Bullet Generation Skill (bundle-driven)
 - API-only database access (Supabase Postgres)
 - History replay and detail pages
 - No auth/login flow
@@ -19,6 +20,7 @@ A TypeScript strict, Next.js App Router demo that treats skills as executable ca
   - `page.tsx`
   - `history/page.tsx`
   - `history/[id]/page.tsx`
+  - `api/extract-jd/route.ts`
   - `api/analyze/route.ts`
   - `api/history/route.ts`
   - `api/history/[id]/route.ts`
@@ -56,6 +58,7 @@ OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_TIMEOUT_MS=30000
 NEXT_PUBLIC_ANALYZE_TIMEOUT_MS=90000
+JD_FETCH_TIMEOUT_MS=15000
 ```
 
 4. Run SQL in Supabase SQL editor:
@@ -73,8 +76,11 @@ Open `http://localhost:3000`.
 ## API
 
 - `POST /api/analyze`
-  - body: `{ "jdText": "..." }`
+  - body: `{ "jdText": "...", "jdUrl": "https://..." }`
   - runs LLM-driven skill orchestrator, persists to DB, returns result
+- `POST /api/extract-jd`
+  - body: `{ "url": "https://..." }`
+  - fetches page and extracts JD text
 - `GET /api/history?limit=20`
   - returns recent analysis list
 - `GET /api/history/:id`
@@ -91,3 +97,4 @@ If `lib/skills` is removed, analysis flow fails (required by design).
 - The 4 skills then consume that bundle locally (no repeated LLM round-trips).
 - If your network cannot access `api.openai.com`, set `OPENAI_BASE_URL` to a reachable OpenAI-compatible endpoint.
 - If browser shows timeout, increase `NEXT_PUBLIC_ANALYZE_TIMEOUT_MS` and restart dev server.
+- If JD URL extraction is slow, increase `JD_FETCH_TIMEOUT_MS`.

@@ -26,6 +26,16 @@ export type LLMAnalysisBundle = {
   bullets: string[];
 };
 
+export type JDFetchInput = {
+  url: string;
+};
+
+export type JDFetchOutput = {
+  sourceUrl: string;
+  title: string | null;
+  jdText: string;
+};
+
 export type ParsedJD = {
   normalizedText: string;
   tokens: string[];

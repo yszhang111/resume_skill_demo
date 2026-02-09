@@ -1,20 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runSkillDrivenAnalysis } from "@/lib/orchestrator";
+import { jdFetchSkill } from "@/lib/skills/jdFetchSkill";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { AnalysisResult } from "@/lib/types";
 
 type AnalyzeRequestBody = {
   jdText?: string;
+  jdUrl?: string;
 };
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as AnalyzeRequestBody;
-    const jdText = body.jdText?.trim() ?? "";
+    let jdText = body.jdText?.trim() ?? "";
+    let sourceUrl: string | null = null;
+
+    if (jdText.length < 20 && body.jdUrl?.trim()) {
+      try {
+        const extracted = await jdFetchSkill.run({ url: body.jdUrl.trim() });
+        jdText = extracted.jdText;
+        sourceUrl = extracted.sourceUrl;
+      } catch (fetchError) {
+        const detail = fetchError instanceof Error ? fetchError.message : "Unknown JD fetch error";
+        return NextResponse.json(
+          {
+            error: "JD URL extraction failed.",
+            detail
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     if (jdText.length < 20) {
       return NextResponse.json(
-        { error: "jdText is required and must be at least 20 characters." },
+        { error: "jdText is required (>=20 chars), or provide a valid jdUrl." },
         { status: 400 }
       );
     }
@@ -71,6 +91,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       analysisId: data.id,
       createdAt: data.created_at,
+      sourceUrl,
       ...result
     });
   } catch (error) {
