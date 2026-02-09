@@ -55,6 +55,7 @@ OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_TIMEOUT_MS=30000
+NEXT_PUBLIC_ANALYZE_TIMEOUT_MS=90000
 ```
 
 4. Run SQL in Supabase SQL editor:
@@ -86,5 +87,7 @@ If `lib/skills` is removed, analysis flow fails (required by design).
 ## LLM behavior
 
 - `OPENAI_API_KEY` is required. Without it, `/api/analyze` fails.
-- All 4 core skills call OpenAI and return structured JSON.
+- `/api/analyze` uses a single OpenAI call to generate a shared analysis bundle.
+- The 4 skills then consume that bundle locally (no repeated LLM round-trips).
 - If your network cannot access `api.openai.com`, set `OPENAI_BASE_URL` to a reachable OpenAI-compatible endpoint.
+- If browser shows timeout, increase `NEXT_PUBLIC_ANALYZE_TIMEOUT_MS` and restart dev server.

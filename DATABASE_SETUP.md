@@ -32,6 +32,7 @@ OPENAI_API_KEY=YOUR_OPENAI_API_KEY
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_TIMEOUT_MS=30000
+NEXT_PUBLIC_ANALYZE_TIMEOUT_MS=90000
 ```
 
 You can also run:
@@ -43,6 +44,7 @@ cp .env.example .env.local
 Then replace placeholder values.
 
 `OPENAI_API_KEY` is required in this version because all skills are LLM-driven.
+Current runtime design uses one OpenAI call per analyze request, and all skills consume the shared result.
 
 ## 4. Initialize DB schema
 
@@ -93,6 +95,8 @@ Then:
 - Error detail contains `OpenAI network request failed` / `fetch failed`
   - Your machine cannot reach current `OPENAI_BASE_URL`.
   - Try setting `OPENAI_BASE_URL` to a reachable OpenAI-compatible endpoint in your network.
+- Browser error `Analyze request timed out ...`
+  - Increase `NEXT_PUBLIC_ANALYZE_TIMEOUT_MS` in `.env.local` (for example `90000`) and restart dev server.
 - Error from `/api/analyze` insert:
   - Confirm `supabase.sql` has been executed.
   - Confirm table name is `analyses` in `public` schema.

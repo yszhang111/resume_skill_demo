@@ -1,3 +1,4 @@
+import { generateLLMAnalysisBundle } from "./llm/openai";
 import { TAXONOMY_CATEGORIES, skillTaxonomy } from "./skillTaxonomy";
 import { bulletGenerationSkill } from "./skills/bulletGenerationSkill";
 import { gapAnalysisSkill } from "./skills/gapAnalysisSkill";
@@ -44,6 +45,14 @@ const buildSummary = (
 };
 
 export const runSkillDrivenAnalysis = async (jdText: string): Promise<AnalysisResult> => {
+  let bundle: Awaited<ReturnType<typeof generateLLMAnalysisBundle>>;
+  try {
+    bundle = await generateLLMAnalysisBundle(jdText, skillTaxonomy);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`[LLM Bundle Generation] ${message}`);
+  }
+
   const context: {
     parsed: Awaited<ReturnType<typeof jdParsingSkill.run>>;
     matched: Awaited<ReturnType<typeof skillMatchingSkill.run>>;
@@ -57,21 +66,21 @@ export const runSkillDrivenAnalysis = async (jdText: string): Promise<AnalysisRe
   };
 
   try {
-    context.parsed = await jdParsingSkill.run(jdText);
+    context.parsed = await jdParsingSkill.run({ jdText, bundle });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     throw new Error(`[${jdParsingSkill.name}] ${message}`);
   }
 
   try {
-    context.matched = await skillMatchingSkill.run(context.parsed);
+    context.matched = await skillMatchingSkill.run({ parsed: context.parsed, bundle });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     throw new Error(`[${skillMatchingSkill.name}] ${message}`);
   }
 
   try {
-    context.gaps = await gapAnalysisSkill.run(context.matched);
+    context.gaps = await gapAnalysisSkill.run({ matched: context.matched, bundle });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     throw new Error(`[${gapAnalysisSkill.name}] ${message}`);
@@ -81,7 +90,8 @@ export const runSkillDrivenAnalysis = async (jdText: string): Promise<AnalysisRe
     context.bullets = await bulletGenerationSkill.run({
       parsed: context.parsed,
       matched: context.matched,
-      gaps: context.gaps
+      gaps: context.gaps,
+      bundle
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

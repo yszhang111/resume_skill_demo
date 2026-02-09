@@ -5,3 +5,4 @@ out
 .env
 pnpm-lock.yaml
 .DS_Store
+*.tsbuildinfo

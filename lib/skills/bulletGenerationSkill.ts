@@ -1,67 +1,32 @@
-import { callOpenAIJSON } from "@/lib/llm/openai";
 import type { BulletGenerationInput, Skill } from "../types";
 
-type BulletRaw = {
-  bullets?: unknown;
-};
+const sanitizeBullets = (bullets: string[]): string[] =>
+  Array.from(new Set(bullets.map((item) => item.trim()).filter((item) => item.length > 0))).slice(0, 5);
 
-const isBulletRaw = (data: unknown): data is BulletRaw => {
-  return Boolean(data) && typeof data === "object";
-};
+const buildFallbackBullets = (input: BulletGenerationInput): string[] => {
+  const topMatched = input.matched.matchedSkills.slice(0, 2).map((item) => item.name).join(", ");
+  const topGaps = input.gaps.missingSkills
+    .slice(0, 1)
+    .flatMap((item) => item.suggestions)
+    .slice(0, 2)
+    .join("/");
 
-const sanitizeBullets = (value: unknown): string[] => {
-  if (Array.isArray(value)) {
-    return value
-      .filter((item): item is string => typeof item === "string")
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0);
-  }
-
-  if (typeof value === "string") {
-    return value
-      .split(/\n+/)
-      .map((item) => item.replace(/^-\s*/, "").trim())
-      .filter((item) => item.length > 0);
-  }
-
-  return [];
+  return [
+    `Built a skill-driven analysis pipeline aligned to JD signals across ${topMatched || "core engineering"} domains.`,
+    "Implemented orchestrated skill execution and persisted structured analysis results for history replay.",
+    `Identified high-priority capability gaps ${topGaps ? `including ${topGaps}` : "for follow-up roadmap planning"} to improve role fit.`
+  ];
 };
 
 export const bulletGenerationSkill: Skill<BulletGenerationInput, string[]> = {
   name: "Bullet Generation Skill",
-  description: "LLM generate 3-5 engineering resume bullets from matched and gap context.",
+  description: "Generate final resume bullets from shared LLM bundle with deterministic fallback safeguards.",
   async run(input: BulletGenerationInput): Promise<string[]> {
-    const output = await callOpenAIJSON<BulletRaw>({
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are Bullet Generation Skill. Generate 3-5 concise, engineering-focused resume bullets. Emphasize platform, pipeline, system design, and measurable impact. Return JSON only."
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            context: input,
-            output_schema: {
-              bullets: ["string"]
-            },
-            constraints: [
-              "Each bullet is one sentence.",
-              "No generic fluff.",
-              "Keep 3 to 5 bullets total."
-            ]
-          })
-        }
-      ],
-      validate: isBulletRaw
-    });
-
-    const bullets = Array.from(new Set(sanitizeBullets(output.bullets))).slice(0, 5);
-
-    if (bullets.length < 3) {
-      throw new Error("Bullet Generation Skill returned fewer than 3 valid bullets.");
+    const bullets = sanitizeBullets(input.bundle.bullets);
+    if (bullets.length >= 3) {
+      return bullets;
     }
 
-    return bullets;
+    return buildFallbackBullets(input);
   }
 };

@@ -11,9 +11,29 @@ export type SkillDefinition = {
   weight: number;
 };
 
+export type LLMAnalysisBundle = {
+  normalizedText: string;
+  tokens: string[];
+  matchedSkills: {
+    name: string;
+    evidence: string[];
+  }[];
+  missingSkills: {
+    category: string;
+    suggestions: string[];
+  }[];
+  summary: string;
+  bullets: string[];
+};
+
 export type ParsedJD = {
   normalizedText: string;
   tokens: string[];
+};
+
+export type JDParsingInput = {
+  jdText: string;
+  bundle: LLMAnalysisBundle;
 };
 
 export type MatchedSkill = {
@@ -27,6 +47,11 @@ export type SkillMatchingOutput = {
   matchedSkills: MatchedSkill[];
 };
 
+export type SkillMatchingInput = {
+  parsed: ParsedJD;
+  bundle: LLMAnalysisBundle;
+};
+
 export type MissingSkillGroup = {
   category: string;
   suggestions: string[];
@@ -37,10 +62,16 @@ export type GapAnalysisOutput = {
   summary: string;
 };
 
+export type GapAnalysisInput = {
+  matched: SkillMatchingOutput;
+  bundle: LLMAnalysisBundle;
+};
+
 export type BulletGenerationInput = {
   parsed: ParsedJD;
   matched: SkillMatchingOutput;
   gaps: GapAnalysisOutput;
+  bundle: LLMAnalysisBundle;
 };
 
 export type AnalysisResult = {

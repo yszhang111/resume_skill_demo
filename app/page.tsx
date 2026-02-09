@@ -15,7 +15,16 @@ type ErrorResponse = {
   detail?: string;
 };
 
-const REQUEST_TIMEOUT_MS = 20000;
+const parseTimeout = () => {
+  const raw = process.env.NEXT_PUBLIC_ANALYZE_TIMEOUT_MS;
+  const value = raw ? Number.parseInt(raw, 10) : 90000;
+  if (Number.isNaN(value)) {
+    return 90000;
+  }
+  return Math.min(Math.max(value, 10000), 180000);
+};
+
+const REQUEST_TIMEOUT_MS = parseTimeout();
 
 export default function HomePage() {
   const [jdText, setJdText] = useState("");
